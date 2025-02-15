@@ -8,7 +8,7 @@ def get_recipe_keyboard(recipes, page):
         )
         for recipe in recipes
     ]
-    grouped_buttons = [buttons[i: i + 2] for i in range(0, len(buttons), 2)]
+    grouped_buttons = [buttons[i : i + 2] for i in range(0, len(buttons), 2)]
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=grouped_buttons)
 

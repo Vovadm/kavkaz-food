@@ -15,7 +15,6 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from webdriver_manager.chrome import ChromeDriverManager
 
 
-
 load_dotenv()
 DATABASE_URL = os.getenv("DB_URL")
 
@@ -27,7 +26,6 @@ AsyncSessionLocal = sessionmaker(
 Base = declarative_base()
 
 
-# Модель для рецепта
 class Recipe(Base):
     __tablename__ = "recipes"
 
@@ -40,21 +38,17 @@ class Recipe(Base):
     carbs = Column(Float)
     calories = Column(Float)
     instructions = Column(Text, nullable=False)
-    about = Column(Text)  # Новый столбец для краткого описания блюда
+    about = Column(Text)
 
 
-# Инициализация базы данных с удалением старых таблиц
 async def init_db():
-    # Удаление старой таблицы (если существует)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
-    # Создание новой таблицы
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
 
-# Настройка драйвера Selenium для работы с браузером
 chrome_options = Options()
 chrome_options.add_argument("--headless")
 chrome_options.add_argument("--disable-gpu")
@@ -64,7 +58,6 @@ chrome_options.add_argument("--disable-webgl")
 service = Service(ChromeDriverManager().install())
 driver = webdriver.Chrome(service=service, options=chrome_options)
 
-# Список URL рецептов для парсинга
 urls = [
     "https://1000.menu/cooking/44629-lezginskii-xinkal-tonkii",
     "https://1000.menu/cooking/20302-darginskii-xinkal",
@@ -76,16 +69,18 @@ urls = [
 ]
 
 
-# Создаем экземпляр асинхронного клиента для общения с нейросетью
 async def get_about_description(title):
     try:
-        client = AsyncClient()  # Создаем экземпляр клиента
+        client = AsyncClient()
         response = await client.chat.completions.create(
-            model="gpt-4o-mini",  # Модель для генерации ответа
+            model="gpt-4o-mini",
             messages=[
                 {
                     "role": "user",
-                    "content": f"Расскажи об этом блюде, что это такое, краткое описание: {title}",
+                    "content": (
+                        f"Расскажи об этом блюде, что это такое, "
+                        f"краткое описание: {title}"
+                    ),
                 }
             ],
             web_search=False,
@@ -97,7 +92,6 @@ async def get_about_description(title):
         return "Описание не найдено"
 
 
-# Функция для парсинга данных рецепта с сайта
 async def parse_recipe(url):
     driver.get(url)
     time.sleep(2)
@@ -186,7 +180,6 @@ async def parse_recipe(url):
     except Exception:
         image_url = "Не найдено"
 
-    # Получаем описание блюда
     about = await get_about_description(title)
 
     return {
@@ -196,11 +189,10 @@ async def parse_recipe(url):
         "nutrition_values": nutrition_values,
         "instructions": instructions,
         "image_url": image_url,
-        "about": about,  # Добавляем описание
+        "about": about,
     }
 
 
-# Функция для сохранения рецепта в базе данных
 async def save_recipe(session: AsyncSession, recipe_data):
     async with session.begin():
         recipe = Recipe(
@@ -216,13 +208,12 @@ async def save_recipe(session: AsyncSession, recipe_data):
                 recipe_data["nutrition_values"].get("calories") or 0
             ),
             instructions=recipe_data["instructions"],
-            about=recipe_data["about"],  # Сохраняем описание блюда
+            about=recipe_data["about"],
         )
         session.add(recipe)
     await session.commit()
 
 
-# Основная асинхронная функция для запуска процесса
 async def main():
     await init_db()
     recipes = []
@@ -230,10 +221,11 @@ async def main():
         recipe = await parse_recipe(url)
         recipes.append(recipe)
 
-        # Выводим информацию в консоль
         print(
-            f"Название рецепта: {recipe['title']} (Количество порций: {recipe['servings_count']})"
+            f"Название рецепта: {recipe['title']} "
+            f"(Количество порций: {recipe['servings_count']})"
         )
+
         print(f"Описание блюда: {recipe['about']}")
         print("Ингредиенты:")
         for ingredient in recipe["ingredients"].split("\n"):
@@ -249,13 +241,11 @@ async def main():
         print(f"Ссылка на изображение: {recipe['image_url']}")
         print("-" * 40)
 
-    # Сохранение рецептов в БД
     async with AsyncSessionLocal() as session:
         for recipe in recipes:
             await save_recipe(session, recipe)
 
 
-# Запуск основного процесса
 if __name__ == "__main__":
-    asyncio.run(main())  # Запуск через новый цикл
+    asyncio.run(main())
     driver.quit()

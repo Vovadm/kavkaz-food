@@ -113,12 +113,10 @@ async def handle_portions(message: types.Message, state: FSMContext):
             )
 
             async def send_long_message(message, text):
-                # Разбиваем текст на части, каждая из которых не превышает 4096 символов
                 chunk_size = 4096
                 for i in range(0, len(text), chunk_size):
-                    await message.answer(text[i: i + chunk_size])
+                    await message.answer(text[i : i + chunk_size])
 
-            # Использование:
             await send_long_message(message, instruction)
 
             await message.answer(
