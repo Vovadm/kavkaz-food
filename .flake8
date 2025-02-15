@@ -1,0 +1,7 @@
+[flake8]
+max-line-length = 79
+plugins = flake8-import-order, flake8-quotes, pep8-naming
+import-order-style = google
+exclude = .venv, __pycache__, .git
+inline-quotes = "
+application-import-names = keyboards, parsing, handlers
